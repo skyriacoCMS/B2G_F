@@ -62,6 +62,7 @@ if(options.isData):options.LHE = False
 
     
 ###inputTag labels
+rhoLabel = "fixedGridRhoFastjetAll"
 phoLabel = 'slimmedPhotons'
 muLabel  = 'slimmedMuons'
 elLabel  = 'slimmedElectrons'
@@ -346,8 +347,8 @@ process.skimmedPatMuons = cms.EDFilter(
 process.skimmedPatPhotons = cms.EDFilter(
     "PATPhotonSelector",
     src = cms.InputTag(phoLabel),
-    cut = cms.string("pt > 30 && abs(eta) < 2.4")
- 
+    cut = cms.string("pt > 30 && abs(eta) < 2.4"),
+   
 )
 
 
@@ -393,11 +394,27 @@ process.EventUserData = cms.EDProducer(
     'EventUserData'
 )
 
+
+#process.photonIDValueMapProducer = cms.EDProducer('PhotonIDValueMapProducer',
+#                                          ebReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEBRecHits"),
+#                                          eeReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEERecHits"),
+#                                          vertices = cms.InputTag("offlineSlimmedPrimaryVertices"),
+#                                          pfCandidates = cms.InputTag("packedPFCandidates"),
+#                                          src = cms.InputTag('slimmedPhotons'),
+#                                          # Use PAT format for miniAOD:
+#                                          dataFormat = cms.string('PAT')
+#)
+
+
 process.photonUserData = cms.EDProducer(
     'PhotonUserData',
     phoLabel = cms.InputTag("skimmedPatPhotons"),
     pv        = cms.InputTag(pvLabel),
     conversion        = cms.InputTag(convLabel),
+    rho               = cms.InputTag(rhoLabel),
+    ebReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEBRecHits"),
+    eeReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEERecHits"),
+    pakedPFCands = cms.InputTag("packedPFCandidates")
     )
 
 
@@ -512,12 +529,14 @@ process.analysisPath+=process.muonUserData
 process.analysisPath+=process.jetUserData
 process.analysisPath+=process.jetUserDataAK8
 #process.analysisPath+=process.subjetUserDataAK8
+#process.analysisPath+=process.photonIDValueMapProducer
 process.analysisPath+=process.photonUserData
 process.analysisPath+=process.electronUserData
 
 process.analysisPath+=process.EventUserData
 
 process.analysisPath+=process.genPart
+process.analysisPath+=process.photons
 process.analysisPath+=process.muons
 process.analysisPath+=process.electrons
 process.analysisPath+=process.jetsAK4
