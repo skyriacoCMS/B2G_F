@@ -145,11 +145,6 @@ PhotonUserData::PhotonUserData(const edm::ParameterSet& iConfig):
    pckPFCdsLabel_(iConfig.getParameter<edm::InputTag>("packedPFCands")),
    ebReducedRecHitCollection_(consumes <EcalRecHitCollection> (iConfig.getParameter<edm::InputTag>("ebReducedRecHitCollection"))), //Lazy tool additions
    eeReducedRecHitCollection_(consumes <EcalRecHitCollection> (iConfig.getParameter<edm::InputTag>("eeReducedRecHitCollection")))  // Lazy tool additions  
-   /*
-   ebReducedRecHitCollection_() ;  
-  ebReducedRecHitCollection_ consumes<EcalRecHitCollection>( ebRCH_);
-  edm::EDGetTokenT<EcalRecHitCollection>   =  consumes<EcalRecHitCollection>( eeRCH_);
-   */
 
 
 {
@@ -281,7 +276,7 @@ void PhotonUserData::produce( edm::Event& iEvent, const edm::EventSetup& iSetup)
         else if( abs(pdgId) == 211) // PDG ID for pi+-                                                                 
           thisCandidateType = reco::PFCandidate::h;
 
-	if(thisCandidateType == reco::PFCandidate::gamma ){
+	if(thisCandidateType == reco::PFCandidate::h ){
 	 float dz = pfC.pseudoTrack().dz(pv.position());
 	 float dxy =pfC.pseudoTrack().dxy(pv.position());
 	  if( dxyMax < dxy ) continue;
