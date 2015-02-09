@@ -21,15 +21,6 @@
 
 
 
-
-
-#include "DataFormats/PatCandidates/interface/Electron.h"
-#include "RecoEgamma/EgammaTools/interface/ConversionTools.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
-//#include "RecoEgamma/PhotonIdentification/src/PFPhotonIsolationCalculator.h"
-///   
-
-
 // Vertex
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
@@ -51,7 +42,6 @@ using namespace reco;
 using namespace edm;
 using namespace std;
 
-
 class  PhotonUserData : public edm::EDProducer {
 public:
   PhotonUserData( const edm::ParameterSet & );   
@@ -65,34 +55,37 @@ private:
   InputTag phoLabel_;
   InputTag pvLabel_, convLabel_;
   InputTag rhoLabel_;
-  InputTag ebRCH_,eeRCH_;
   InputTag pckPFCdsLabel_;
+  edm::EDGetTokenT<EcalRecHitCollection> ebReducedRecHitCollection_;
+  edm::EDGetTokenT<EcalRecHitCollection> eeReducedRecHitCollection_;
+  
 
-
+  
+  
   InputTag triggerResultsLabel_, triggerSummaryLabel_;
   InputTag hltElectronFilterLabel_;
   TString hltPath_;
   HLTConfigProvider hltConfig;
   int triggerBit;
   int debug_; 
-
+  
 };
 
 
 
 //Necessary for the Photon Footprint removal
-//template <class T, class U>
-//bool isInFootprint(const T& thefootprint, const U& theCandidate) {
-//  for ( auto itr = thefootprint.begin(); itr != thefootprint.end(); ++itr ) {
-//    if( itr->key() == theCandidate.key() ) return true;
-//  }
-//  return false;
-//}
+template <class T, class U>
+bool isInFootprint(const T& thefootprint, const U& theCandidate) {
+  for ( auto itr = thefootprint.begin(); itr != thefootprint.end(); ++itr ) {
+    if( itr.key() == theCandidate.key() ) return true;
+  }
+  return false;
+}
 
 
 
 
-
+//Necessary for the  Isolation Rho Correction
 namespace EffectiveAreas {
   const int nEtaBins = 7;
   const float etaBinLimits[nEtaBins+1] = {
@@ -109,6 +102,37 @@ namespace EffectiveAreas {
   };
 }
 
+// The Cut based Photon ID's - the current is PHYS 14 first Iteration
+
+namespace CPID_B{
+
+  // this ID is the PHYS14 Iteration 1 for Barrel
+  const float H_o_E[3]={0.032,0.020,0.012};
+  const float s_IEIE[3]={0.01000,0.0099,0.0098};
+  const float isoC[3]={2.94,2.62,1.91};
+  const float isoN[3]={3.16,2.69,2.55};
+  const float isoP[3]={4.43,1.35,1.29};
+  const float slope_n = 0.0023;
+  const float slope_p = 0.0004;
+  
+
+}
+
+
+namespace CPID_E{
+
+  // this ID is the PHYS14 Iteration 1 for EndCap
+  const float H_o_E[3]={0.023,0.011,0.011};
+  const float s_IEIE[3]={0.0270,0.0269,0.0264};
+  const float isoC[3]={3.07,1.40,1.26};
+  const float isoN[3]={17.16,4.92,2.71};
+  const float isoP[3]={2.11,2.11,1.91};
+  const float slope_n = 0.0116;
+  const float slope_p = 0.0037;
+  
+
+}
+
 
 
 
@@ -117,12 +141,17 @@ namespace EffectiveAreas {
 PhotonUserData::PhotonUserData(const edm::ParameterSet& iConfig):
    phoLabel_(iConfig.getParameter<edm::InputTag>("phoLabel")),
    pvLabel_(iConfig.getParameter<edm::InputTag>("pv")),   // "offlinePrimaryVertex"
-   convLabel_(iConfig.getParameter<edm::InputTag>("conversion")),  // "offlinePrimaryVertex"
    rhoLabel_(iConfig.getParameter<edm::InputTag>("rho")), //rhofixedgridRhoFastjet All"
-   ebRCH_(iConfig.getParameter<edm::InputTag>("ebReducedRecHitCollection")), //Lazy tool additions
-   eeRCH_(iConfig.getParameter<edm::InputTag>("eeReducedRecHitCollection")),  // Lazy tool additions
-   pckPFCdsLabel_(iConfig.getParameter<edm::InputTag>("packedPFCands"))
- 
+   pckPFCdsLabel_(iConfig.getParameter<edm::InputTag>("packedPFCands")),
+   ebReducedRecHitCollection_(consumes <EcalRecHitCollection> (iConfig.getParameter<edm::InputTag>("ebReducedRecHitCollection"))), //Lazy tool additions
+   eeReducedRecHitCollection_(consumes <EcalRecHitCollection> (iConfig.getParameter<edm::InputTag>("eeReducedRecHitCollection")))  // Lazy tool additions  
+   /*
+   ebReducedRecHitCollection_() ;  
+  ebReducedRecHitCollection_ consumes<EcalRecHitCollection>( ebRCH_);
+  edm::EDGetTokenT<EcalRecHitCollection>   =  consumes<EcalRecHitCollection>( eeRCH_);
+   */
+
+
 {
   debug_ = iConfig.getUntrackedParameter<int>("debugLevel",int(0));
   produces<std::vector<pat::Photon> >();
@@ -143,32 +172,26 @@ void PhotonUserData::produce( edm::Event& iEvent, const edm::EventSetup& iSetup)
   
   
   //Packed PF Cands
-  edm::Handle<std::vector<pat::PackedCandidate>> pfCndHandle;
-  iEvent.getByLabel(pckPFCdsLabel_,pfCndHandle); 
-  auto_ptr<vector<pat::PackedCandidate> > CandColl( new vector<pat::PackedCandidate> (*pfCndHandle) );
-  
+  edm::Handle<std::vector<pat::PackedCandidate>> pfCnd1Handle;
+  iEvent.getByLabel(pckPFCdsLabel_,pfCnd1Handle); 
+  auto_ptr<vector<pat::PackedCandidate> > CandColl( new vector<pat::PackedCandidate> (*pfCnd1Handle) );
+
+
+
+  edm::Handle< edm::View<reco::Candidate>> pfCndHandle;
+  iEvent.getByLabel(pckPFCdsLabel_,pfCndHandle);
+
+
+
 
 
   // Ecal Rec Hits
-  edm::EDGetTokenT<EcalRecHitCollection> ebReducedRecHitCollection_;
-  edm::EDGetTokenT<EcalRecHitCollection> eeReducedRecHitCollection_;
-  ebReducedRecHitCollection_ = consumes<EcalRecHitCollection>( ebRCH_);
-  eeReducedRecHitCollection_ = consumes<EcalRecHitCollection>( eeRCH_);
-  
 
   //rho
   float rho_;
   edm::Handle< double > rhoH;
   iEvent.getByLabel(rhoLabel_,rhoH);
   rho_ = *rhoH;
-
-
-  Handle<reco::ConversionCollection> conversions;
-  iEvent.getByLabel(convLabel_, conversions);
-
-
-
-
 
 
   if(debug_>=1) cout<<"vtx size " << vertices->size()<<endl; 
@@ -188,8 +211,10 @@ void PhotonUserData::produce( edm::Event& iEvent, const edm::EventSetup& iSetup)
  
 
 
-  for(size_t i = 0; i< phoColl->size();i++){
+  for(size_t i = 0; i < phoColl->size();i++){
     pat::Photon & pho = (*phoColl)[i];
+
+   
 
     
     float pho_eta = pho.superCluster()->eta();
@@ -220,9 +245,6 @@ void PhotonUserData::produce( edm::Event& iEvent, const edm::EventSetup& iSetup)
     float sigmaIetaIeta = see;
 
     //isolation variables 
-    float isoN = pho.neutralHadronIso(); 
-    float isoP = pho.photonIso(); 
-    float isoC = pho.chargedHadronIso(); 
 
     //Calculating the Isolation from the pf candidates
     //CandColl
@@ -230,18 +252,49 @@ void PhotonUserData::produce( edm::Event& iEvent, const edm::EventSetup& iSetup)
     float iso_ch = 0; 
     float iso_n = 0; 
     float iso_p = 0; 
-    
+   
+    const float coneSizeDR = 0.3; 
+    const float dxyMax     = 0.1; 
+    const float dzMax      = 0.2; 
+
+
     for(size_t k = 0; k< CandColl->size();i++){
       pat::PackedCandidate & pfC = (*CandColl)[i];
-      float DR = deltaR(photon_directionWrtVtxs.eta(),photon_directionWrtVtxs.phi(),pfC.eta(),pfC.phi());
-      if(DR < 0.3 ){
-	
-	
+      
+      const auto& iCand = pfCndHandle->ptrAt(k);                                                          
 
+
+      float DR = deltaR(photon_directionWrtVtxs.eta(),photon_directionWrtVtxs.phi(),pfC.eta(),pfC.phi());
+      if(DR > coneSizeDR) continue;
+
+	bool inFootprint = isInFootprint(pho.associatedPackedPFCandidates(), iCand);
+	if(inFootprint) continue;
 	
+	// Now  we need to check the type of the Candidate and also associate the PF::h with the primary vertex
 	
-      }
+	reco::PFCandidate::ParticleType thisCandidateType = reco::PFCandidate::X;
+	const int pdgId = pfC.pdgId();
+        if( pdgId == 22 )
+          thisCandidateType = reco::PFCandidate::gamma;
+        else if( abs(pdgId) == 130) // PDG ID for K0L                                                                  
+          thisCandidateType = reco::PFCandidate::h0;
+        else if( abs(pdgId) == 211) // PDG ID for pi+-                                                                 
+          thisCandidateType = reco::PFCandidate::h;
+
+	if(thisCandidateType == reco::PFCandidate::gamma ){
+	 float dz = pfC.pseudoTrack().dz(pv.position());
+	 float dxy =pfC.pseudoTrack().dxy(pv.position());
+	  if( dxyMax < dxy ) continue;
+	  if( dzMax < dz ) continue;
+	  iso_ch += pfC.pt();
+	}
+	
+	if(thisCandidateType == reco::PFCandidate::h0    ) iso_n += pfC.pt();	
+	if(thisCandidateType == reco::PFCandidate::gamma ) iso_p += pfC.pt();
     }
+
+
+
     
 
 
@@ -250,9 +303,9 @@ void PhotonUserData::produce( edm::Event& iEvent, const edm::EventSetup& iSetup)
     int ieBin = 0; 
     while(ieBin < (EffectiveAreas::nEtaBins -1) && pho_eta > EffectiveAreas::etaBinLimits[ieBin+1]) ieBin++;
 
-    float isoC_withEA = std::max(float(0.0),isoC - rho_ * EffectiveAreas::areaChargedHadrons[ieBin]);
-    float isoN_withEA = std::max(float(0.0),isoN - rho_ * EffectiveAreas::areaNeutralHadrons[ieBin]);
-    float isoP_withEA = std::max(float(0.0),isoP - rho_ * EffectiveAreas::areaPhotons[ieBin]);
+    float isoC_withEA = std::max(float(0.0),iso_ch - rho_ * EffectiveAreas::areaChargedHadrons[ieBin]);
+    float isoN_withEA = std::max(float(0.0),iso_n - rho_ * EffectiveAreas::areaNeutralHadrons[ieBin]);
+    float isoP_withEA = std::max(float(0.0),iso_p - rho_ * EffectiveAreas::areaPhotons[ieBin]);
 
 
     
@@ -265,27 +318,33 @@ void PhotonUserData::produce( edm::Event& iEvent, const edm::EventSetup& iSetup)
     int isLoose  = 0; 
     int isMedium = 0; 
     int isTight  = 0; 
+    
+    if(fabs(pho_eta) < 1.479){
+      if(hoe < CPID_B::H_o_E[0]  && sigmaIetaIeta < CPID_B::s_IEIE[0]  && isoC_withEA < CPID_B::isoC[0] &&  isoN_withEA  < CPID_B::isoN[0] + CPID_B::slope_n*pho_pt && isoP_withEA < CPID_B::isoP[0] + CPID_B::slope_p*pho_pt ) isLoose = 1;
+      
+      if(hoe < CPID_B::H_o_E[1]  && sigmaIetaIeta < CPID_B::s_IEIE[1]  && isoC_withEA < CPID_B::isoC[1] &&  isoN_withEA  < CPID_B::isoN[1] + CPID_B::slope_n*pho_pt && isoP_withEA < CPID_B::isoP[1] + CPID_B::slope_p*pho_pt ) isMedium = 1;
+      if(hoe < CPID_B::H_o_E[2]  && sigmaIetaIeta < CPID_B::s_IEIE[2]  && isoC_withEA < CPID_B::isoC[2] &&  isoN_withEA  < CPID_B::isoN[2] + CPID_B::slope_n*pho_pt && isoP_withEA < CPID_B::isoP[2] + CPID_B::slope_p*pho_pt ) isTight = 1;
+    }else{
+      if(hoe < CPID_E::H_o_E[0]  && sigmaIetaIeta < CPID_E::s_IEIE[0]  && isoC_withEA < CPID_E::isoC[0] &&  isoN_withEA  < CPID_E::isoN[0] + CPID_E::slope_n*pho_pt && isoP_withEA < CPID_E::isoP[0] + CPID_E::slope_p*pho_pt ) isLoose = 1;
+      if(hoe < CPID_E::H_o_E[1]  && sigmaIetaIeta < CPID_E::s_IEIE[1]  && isoC_withEA < CPID_E::isoC[1] &&  isoN_withEA  < CPID_E::isoN[1] + CPID_E::slope_n*pho_pt && isoP_withEA < CPID_E::isoP[1] + CPID_E::slope_p*pho_pt ) isMedium = 1;
+      if(hoe < CPID_E::H_o_E[2]  && sigmaIetaIeta < CPID_E::s_IEIE[2]  && isoC_withEA < CPID_E::isoC[2] &&  isoN_withEA  < CPID_E::isoN[2] + CPID_E::slope_n*pho_pt && isoP_withEA < CPID_E::isoP[2] + CPID_E::slope_p*pho_pt ) isTight = 1;
+    }
+    
 
 
 
-
-    pho.addUserInt("phoSc_eta",pho_eta);
-    pho.addUserInt("phoSc_phi",pho_phi);
+    pho.addUserInt("phoSceta",pho_eta);
+    pho.addUserInt("phoScphi",pho_phi);
+    pho.addUserInt("phopt",pho_pt);
 
     pho.addUserInt("hasPixelSeed",   hasPixelSeed);
     pho.addUserFloat("sigmaIetaIeta",    sigmaIetaIeta);
     pho.addUserFloat("hoe",     hoe);
-    pho.addUserFloat("r_9",     r_9);
-    pho.addUserFloat("isoC",    isoC);
-    pho.addUserFloat("isoP",    isoP);
-    pho.addUserFloat("isoN",    isoN);
+    pho.addUserFloat("r9",     r_9);
 
-
-    pho.addUserFloat("isoC_withEA",isoC_withEA);
-    pho.addUserFloat("isoP_withEA",isoP_withEA);
-    pho.addUserFloat("isoN_withEA",isoN_withEA);
-  
-
+    pho.addUserFloat("isoCwithEA",isoC_withEA);
+    pho.addUserFloat("isoPwithEA",isoP_withEA);
+    pho.addUserFloat("isoNwithEA",isoN_withEA);
 
     pho.addUserFloat("isLoose",    isLoose);
     pho.addUserFloat("isMedium",    isMedium);

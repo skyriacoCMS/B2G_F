@@ -410,11 +410,10 @@ process.photonUserData = cms.EDProducer(
     'PhotonUserData',
     phoLabel = cms.InputTag("skimmedPatPhotons"),
     pv        = cms.InputTag(pvLabel),
-    conversion        = cms.InputTag(convLabel),
     rho               = cms.InputTag(rhoLabel),
+    packedPFCands = cms.InputTag("packedPFCandidates"),
     ebReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEBRecHits"),
-    eeReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEERecHits"),
-    pakedPFCands = cms.InputTag("packedPFCandidates")
+    eeReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEERecHits")
     )
 
 
