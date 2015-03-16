@@ -1,4 +1,4 @@
-### *****************************************************************************************
+## *****************************************************************************************
 ### Usage:
 ###
 ### cmsRun b2gedmntuples_cfg.py maxEvts=N 
@@ -416,6 +416,20 @@ process.photonUserData = cms.EDProducer(
     eeReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEERecHits")
     )
 
+process.photonJets = cms.EDProducer(
+    'PhotonJets',
+    phoLabel = cms.InputTag("skimmedPatPhotons"),
+    pv        = cms.InputTag(pvLabel),
+    rho               = cms.InputTag(rhoLabel),
+    packedPFCands = cms.InputTag("packedPFCandidates"),
+    jetLabel  = cms.InputTag("slimmedJetsAK8"),
+    ebReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEBRecHits"),
+    eeReducedRecHitCollection = cms.InputTag("reducedEgamma:reducedEERecHits")
+   
+    )
+
+
+
 
 process.muonUserData = cms.EDProducer(
     'MuonUserData',
@@ -530,12 +544,14 @@ process.analysisPath+=process.jetUserDataAK8
 #process.analysisPath+=process.subjetUserDataAK8
 #process.analysisPath+=process.photonIDValueMapProducer
 process.analysisPath+=process.photonUserData
+process.analysisPath+=process.photonJets
 process.analysisPath+=process.electronUserData
 
 process.analysisPath+=process.EventUserData
 
 process.analysisPath+=process.genPart
 process.analysisPath+=process.photons
+#process.analysisPath+=process.photonjets
 process.analysisPath+=process.muons
 process.analysisPath+=process.electrons
 process.analysisPath+=process.jetsAK4

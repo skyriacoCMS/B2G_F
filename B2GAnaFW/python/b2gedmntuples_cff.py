@@ -611,71 +611,155 @@ electrons.src = cms.InputTag("electronUserData")
 
 
 ###photons
-photonVars = (
-
-
-    cms.PSet(
-        tag = cms.untracked.string("SClustereta"),
-        quantity = cms.untracked.string("userFloat('phoSceta')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("SClusterphi"),
-        quantity = cms.untracked.string("userFloat('phoScphi')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("pPt"),
-        quantity = cms.untracked.string("userFloat('phopt')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("hasPixelSeed"),
-        quantity = cms.untracked.string("userFloat('hasPixelSeed')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("HoverE"),
-        quantity = cms.untracked.string("userFloat('hoe')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("SigmaIEtaIEta"),
-        quantity = cms.untracked.string("userFloat('sigmaIetaIeta')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("R9"),
-        quantity = cms.untracked.string("userFloat('r9')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("IsoCwithEA"),
-        quantity = cms.untracked.string("userFloat('isoCwithEA')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("IsoPwithEA"),
-        quantity = cms.untracked.string("userFloat('isoPwithEA')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("IsoNwithEA"),
-        quantity = cms.untracked.string("userFloat('isoNwithEA')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("isLoose"),
-        quantity = cms.untracked.string("userFloat('isLoose')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("isMedium"),
-        quantity = cms.untracked.string("userFloat('isMedium')")
-        ),
-    cms.PSet(
-        tag = cms.untracked.string("isTight"),
-        quantity = cms.untracked.string("userFloat('isTight')")
-        ),
+photons = cms.EDProducer(
+    "CandViewNtpProducer",
+    src=cms.InputTag("skimmedPatPhotons"),
+    lazyParser=cms.untracked.bool(True),
+    prefix=cms.untracked.string("basic"),
+    eventInfo=cms.untracked.bool(False),
+    variables = cms.VPSet(
+        cms.PSet(
+            tag = cms.untracked.string("SClustereta"),
+            quantity = cms.untracked.string("userFloat('phoSceta')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("SClusterphi"),
+            quantity = cms.untracked.string("userFloat('phoScphi')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("Pt"),
+            quantity = cms.untracked.string("userFloat('phopt')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("hasPixelSeed"),
+            quantity = cms.untracked.string("userFloat('hasPixelSeed')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("HoverE"),
+            quantity = cms.untracked.string("userFloat('hoe')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("SigmaIEtaIEta"),
+            quantity = cms.untracked.string("userFloat('sigmaIetaIeta')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("R9"),
+            quantity = cms.untracked.string("userFloat('r9')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("IsoCwithEA"),
+            quantity = cms.untracked.string("userFloat('isoCwithEA')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("IsoPwithEA"),
+            quantity = cms.untracked.string("userFloat('isoPwithEA')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("IsoNwithEA"),
+            quantity = cms.untracked.string("userFloat('isoNwithEA')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("isLoose"),
+            quantity = cms.untracked.string("userFloat('isLoose')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("isMedium"),
+            quantity = cms.untracked.string("userFloat('isMedium')")
+            ),
+        cms.PSet(
+            tag = cms.untracked.string("isTight"),
+            quantity = cms.untracked.string("userFloat('isTight')")
+            ),
+        
+        
+        )
 )
 
-photons  = copy.deepcopy(basic)
-photons.variables += photonVars
+#photons  = copy.deepcopy(basic)
+#photons.variables += photonVars
 photons.prefix = cms.untracked.string("pho")
 photons.src = cms.InputTag("photonUserData")
 
 #photons.src = cms.InputTag("skimmedPatPhotons")
 
+###photonjets 
+photonjets =  cms.EDProducer(
+    "CandViewNtpProducer",
+    src=cms.InputTag("skimmedPatMuons"),
+    lazyParser=cms.untracked.bool(True),
+    prefix=cms.untracked.string("basic"),
+    eventInfo=cms.untracked.bool(False),
+    variables = cms.VPSet(   
+    cms.PSet(
+        tag = cms.untracked.string("JetIndex"),
+        quantity = cms.untracked.string("userInt('jetIndex')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("PhotonIndex"),
+        quantity = cms.untracked.string("userInt('phoIndex')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("PhotonSubjetFrac"),
+        quantity = cms.untracked.string("userFloat('phoSubjetPtFrac')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetPt0"),
+        quantity = cms.untracked.string("userFloat('SubPt0')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetPt1"),
+        quantity = cms.untracked.string("userFloat('SubPt1')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetPt2"),
+        quantity = cms.untracked.string("userFloat('SubPt2')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetEta0"),
+        quantity = cms.untracked.string("userFloat('SubEta0')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetEta1"),
+        quantity = cms.untracked.string("userFloat('SubEta1')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetEta2"),
+        quantity = cms.untracked.string("userFloat('SubEta2')")
+        ),
+    
+    cms.PSet(
+        tag = cms.untracked.string("SubjetPhi0"),
+        quantity = cms.untracked.string("userFloat('SubPhi0')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetPhi1"),
+        quantity = cms.untracked.string("userFloat('SubPhi1')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetPhi2"),
+        quantity = cms.untracked.string("userFloat('SubPhi2')")
+        ),
 
+
+    cms.PSet(
+        tag = cms.untracked.string("SubjetEne0"),
+        quantity = cms.untracked.string("userFloat('SubEne0')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetEne1"),
+        quantity = cms.untracked.string("userFloat('SubEne1')")
+        ),
+    cms.PSet(
+        tag = cms.untracked.string("SubjetEne2"),
+        quantity = cms.untracked.string("userFloat('SubEne2')")
+        ),
+    )
+)
+#photonjets = copy.deepcopy(PhotonVars)
+#photonjets.variables += photonJetVars 
+#photonjets = photonJetVars
+photonjets.prefix = cms.untracked.string("phoJets")
+photonjets.src = cms.InputTag("photonJets")
 
 
 ###jets
@@ -772,6 +856,7 @@ edmNtuplesOut = cms.OutputModule(
     "keep *_genPart_*_*",
     "keep *_muons_*_*",
     "keep *_photons_*_*",
+    "keep *_photonjets_*_*",
     "keep *_electrons_*_*",
     "keep *_jetsAK4_*_*",
     "keep *_subjetsAK8_*_*",
