@@ -203,17 +203,9 @@ void PhotonJets::produce( edm::Event& iEvent, const edm::EventSetup& iSetup) {
   iEvent.getByLabel(jLabel_, jetHandle);
   auto_ptr<vector<pat::Jet> > jetColl( new vector<pat::Jet> (*jetHandle) );
 
-
-
-
-
-  // Ecal Rec Hits
-
-  //rho
-  //  float rho_;
   edm::Handle< double > rhoH;
   iEvent.getByLabel(rhoLabel_,rhoH);
-  //rho_ = *rhoH;
+
 
 
   if(debug_>=1) cout<<"vtx size " << vertices->size()<<endl; 
@@ -225,14 +217,6 @@ void PhotonJets::produce( edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   if(debug_>=1) cout<<"vtxPoint " <<vtxPoint.X()<<" "<< vtxPoint.Y()<<" "<< vtxPoint.Z()<<endl; 
   
-  // noZS::EcalClusterLazyTools *lazyToolnoZS;
-  //lazyToolnoZS = new noZS::EcalClusterLazyTools(iEvent, iSetup, ebReducedRecHitCollection_, eeReducedRecHitCollection_);
-
-  std::cout<<"Eentered Event ok"<<endl;
-
-
-  std::cout<<"ABout to enter the collection"<<endl;
-   
   int ijet = -1; 
   for (size_t i = 0; i< jetColl->size(); i++){
     pat::Jet & jet = (*jetColl)[i];
@@ -247,8 +231,6 @@ void PhotonJets::produce( edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
     int pho_max_pt_indx = -99; 
     double pho_max_pt = 0; 
-    //  int pho_sec_pt_indx = -99; 
-    //    double pho_sec_pt = 0; 
     int ipho = -1; 
     for(size_t j = 0; j < phoColl->size();j++){
       pat::Photon & pho = (*phoColl)[j];
@@ -269,9 +251,6 @@ void PhotonJets::produce( edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	 pho_max_pt  = pho_pt; 
        }
     }//EOF Loop over gammas
-    
-    // hardwired nee to change!!!!!!!!1 for debuggin now only     
-    // pho_max_pt_indx = 0;
     
     // select the highest pt photon in the jet for now
     float spt0 = -99;    float spt1 = -99;    float spt2 = -99;
@@ -363,144 +342,7 @@ void PhotonJets::produce( edm::Event& iEvent, const edm::EventSetup& iSetup) {
     
   }//EOF Loop over Jets
   
-  /*
-  for(size_t i = 0; i < phoColl->size();i++){
-    pat::Photon & pho = (*phoColl)[i];
-    
-    float pho_eta = pho.superCluster()->eta();
-    float pho_phi = pho.superCluster()->phi();
-    float pho_pt  = pho.pt();
 
-    if(pho_pt < 15 || fabs(pho_eta) < 2.5) continue;
-
-    reco::Vertex pv = vertices->at(0);
-    //setting the photon directions with respect to the primary vertex
-    math::XYZVector photon_directionWrtVtxs(pho.superCluster()->x() - pv.x(),
-					    pho.superCluster()->y() - pv.y(),
-					    pho.superCluster()->z() - pv.z());
-    
-
-    // shower shape variables
-    float r_9  = pho.r9();
-    float hoe = pho.hadTowOverEm();
-  
-    //extracting sigma I eta I eat 5X5 using the Lazy tool
-    const auto& theseed = *(pho.superCluster()->seed());
-    float see = -999;
-    std::vector<float> vCov = lazyToolnoZS->localCovariances( theseed );
-    see = (isnan(vCov[0]) ? 0. : sqrt(vCov[0]));
-    float sigmaIetaIeta = see;
-
-    //isolation variables 
-
-    //Calculating the Isolation from the pf candidates
-    //CandColl
-
-    float iso_ch = 0; 
-    float iso_n = 0; 
-    float iso_p = 0; 
-   
-    const float coneSizeDR = 0.3; 
-    const float dxyMax     = 0.1; 
-    const float dzMax      = 0.2; 
-
-
-    for(size_t k = 0; k< CandColl->size();i++){
-      pat::PackedCandidate & pfC = (*CandColl)[i];
-      
-      const auto& iCand = pfCndHandle->ptrAt(k);                                                          
-
-
-      float DR = deltaR(photon_directionWrtVtxs.eta(),photon_directionWrtVtxs.phi(),pfC.eta(),pfC.phi());
-      if(DR > coneSizeDR) continue;
-
-	bool inFootprint = isInFootprint(pho.associatedPackedPFCandidates(), iCand);
-	if(inFootprint) continue;
-	
-	// Now  we need to check the type of the Candidate and also associate the PF::h with the primary vertex
-	
-	reco::PFCandidate::ParticleType thisCandidateType = reco::PFCandidate::X;
-	const int pdgId = pfC.pdgId();
-        if( pdgId == 22 )
-          thisCandidateType = reco::PFCandidate::gamma;
-        else if( abs(pdgId) == 130) // PDG ID for K0L                                                                  
-          thisCandidateType = reco::PFCandidate::h0;
-        else if( abs(pdgId) == 211) // PDG ID for pi+-                                                                 
-          thisCandidateType = reco::PFCandidate::h;
-
-	if(thisCandidateType == reco::PFCandidate::h ){
-	 float dz = pfC.pseudoTrack().dz(pv.position());
-	 float dxy =pfC.pseudoTrack().dxy(pv.position());
-	  if( dxyMax < dxy ) continue;
-	  if( dzMax < dz ) continue;
-	  iso_ch += pfC.pt();
-	}
-	
-	if(thisCandidateType == reco::PFCandidate::h0    ) iso_n += pfC.pt();	
-	if(thisCandidateType == reco::PFCandidate::gamma ) iso_p += pfC.pt();
-    }
-
-
-
-    
-
-
-
-    // setting effective areas region
-    int ieBin = 0; 
-    while(ieBin < (EffectiveAreas::nEtaBins -1) && pho_eta > EffectiveAreas::etaBinLimits[ieBin+1]) ieBin++;
-
-    float isoC_withEA = std::max(float(0.0),iso_ch - rho_ * EffectiveAreas::areaChargedHadrons[ieBin]);
-    float isoN_withEA = std::max(float(0.0),iso_n - rho_ * EffectiveAreas::areaNeutralHadrons[ieBin]);
-    float isoP_withEA = std::max(float(0.0),iso_p - rho_ * EffectiveAreas::areaPhotons[ieBin]);
-
-
-    
-
-    // other variables
-    int hasPixelSeed    = pho.hasPixelSeed(); 
-
-
-    // ID bools
-    int isLoose  = 0; 
-    int isMedium = 0; 
-    int isTight  = 0; 
-    
-    if(fabs(pho_eta) < 1.479){
-      if(hoe < CPID_B::H_o_E[0]  && sigmaIetaIeta < CPID_B::s_IEIE[0]  && isoC_withEA < CPID_B::isoC[0] &&  isoN_withEA  < CPID_B::isoN[0] + CPID_B::slope_n*pho_pt && isoP_withEA < CPID_B::isoP[0] + CPID_B::slope_p*pho_pt ) isLoose = 1;
-      
-      if(hoe < CPID_B::H_o_E[1]  && sigmaIetaIeta < CPID_B::s_IEIE[1]  && isoC_withEA < CPID_B::isoC[1] &&  isoN_withEA  < CPID_B::isoN[1] + CPID_B::slope_n*pho_pt && isoP_withEA < CPID_B::isoP[1] + CPID_B::slope_p*pho_pt ) isMedium = 1;
-      if(hoe < CPID_B::H_o_E[2]  && sigmaIetaIeta < CPID_B::s_IEIE[2]  && isoC_withEA < CPID_B::isoC[2] &&  isoN_withEA  < CPID_B::isoN[2] + CPID_B::slope_n*pho_pt && isoP_withEA < CPID_B::isoP[2] + CPID_B::slope_p*pho_pt ) isTight = 1;
-    }else{
-      if(hoe < CPID_E::H_o_E[0]  && sigmaIetaIeta < CPID_E::s_IEIE[0]  && isoC_withEA < CPID_E::isoC[0] &&  isoN_withEA  < CPID_E::isoN[0] + CPID_E::slope_n*pho_pt && isoP_withEA < CPID_E::isoP[0] + CPID_E::slope_p*pho_pt ) isLoose = 1;
-      if(hoe < CPID_E::H_o_E[1]  && sigmaIetaIeta < CPID_E::s_IEIE[1]  && isoC_withEA < CPID_E::isoC[1] &&  isoN_withEA  < CPID_E::isoN[1] + CPID_E::slope_n*pho_pt && isoP_withEA < CPID_E::isoP[1] + CPID_E::slope_p*pho_pt ) isMedium = 1;
-      if(hoe < CPID_E::H_o_E[2]  && sigmaIetaIeta < CPID_E::s_IEIE[2]  && isoC_withEA < CPID_E::isoC[2] &&  isoN_withEA  < CPID_E::isoN[2] + CPID_E::slope_n*pho_pt && isoP_withEA < CPID_E::isoP[2] + CPID_E::slope_p*pho_pt ) isTight = 1;
-    }
-    
-
-
-    
-    pho.addUserInt("phoSceta",pho_eta);
-    pho.addUserInt("phoScphi",pho_phi);
-    pho.addUserInt("phopt",pho_pt);
-
-    pho.addUserInt("hasPixelSeed",   hasPixelSeed);
-    pho.addUserFloat("sigmaIetaIeta",    sigmaIetaIeta);
-    pho.addUserFloat("hoe",     hoe);
-    pho.addUserFloat("r9",     r_9);
-
-    pho.addUserFloat("isoCwithEA",isoC_withEA);
-    pho.addUserFloat("isoPwithEA",isoP_withEA);
-    pho.addUserFloat("isoNwithEA",isoN_withEA);
-
-    pho.addUserFloat("isLoose",    isLoose);
-    pho.addUserFloat("isMedium",    isMedium);
-    pho.addUserFloat("isTight",    isTight);
-
-  }
-
-  */
-  //  iEvent.put( phoColl );
   iEvent.put( jetColl );
 
 }
